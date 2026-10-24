@@ -9,7 +9,7 @@
     "node": ">= 22.0.0"
   },
   "scripts": {
-    "start": "tsx watch src/index.ts",
+    "start": "node build/index.js",
     "loadtest": "tsx loadtest/example.ts --room my_room --numClients 2",
     "build": "npm run clean && tsc -p tsconfig.build.json",
     "clean": "rm -rf build",
@@ -17,20 +17,21 @@
   },
   "author": "",
   "license": "UNLICENSED",
+  "dependencies": {
+    "@colyseus/schema": "^5.0.14",
+    "@colyseus/tools": "^0.18.1",
+    "colyseus": "^0.18.2",
+    "express": "^5.2.1"
+  },
   "devDependencies": {
     "@colyseus/loadtest": "^0.18.1",
     "@colyseus/sdk": "^0.18.1",
     "@colyseus/testing": "^0.18.5",
     "@types/express": "^5.0.6",
     "@types/mocha": "^10.0.1",
+    "@types/node": "^22.0.0",
     "mocha": "^11.7.5",
     "tsx": "^4.21.0",
     "typescript": "^5.0.4"
-  },
-  "dependencies": {
-    "@colyseus/schema": "^5.0.14",
-    "@colyseus/tools": "^0.18.1",
-    "colyseus": "^0.18.2",
-    "express": "^5.2.1"
   }
 }
