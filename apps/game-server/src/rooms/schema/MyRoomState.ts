@@ -1,21 +1,17 @@
-import { schema, t, type SchemaType } from "@colyseus/schema";
+import { Schema, MapSchema, type } from "@colyseus/schema";
 
-export const Player = schema({
-  score: t.uint16().default(0),
-});
-export type Player = SchemaType<typeof Player>;
+export class Player extends Schema {
+  @type("number")
+  x: number = 0;
 
-export const MyRoomState = schema({
+  @type("number")
+  y: number = 0;
 
-  players: t.map(Player),
+  @type("number")
+  score: number = 0;
+}
 
-  /** sessionId of whoever may act right now; empty before the match starts. */
-  currentTurn: t.string().default(""),
-
-  /** Room-clock time (ms) the current turn expires at. */
-  turnDeadline: t.number().default(0),
-
-  turnCount: t.uint16().default(0),
-
-});
-export type MyRoomState = SchemaType<typeof MyRoomState>;
+export class MyRoomState extends Schema {
+  @type({ map: Player })
+  players = new MapSchema<Player>();
+}
