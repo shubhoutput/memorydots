@@ -1,17 +1,23 @@
 import { Schema, MapSchema, type } from "@colyseus/schema";
 
 export class Player extends Schema {
-  @type("number")
-  x: number = 0;
+  @type("string")
+  sessionId: string = "";
 
   @type("number")
-  y: number = 0;
+  lettersTyped: number = 0;
 
-  @type("number")
-  score: number = 0;
+  @type("string")
+  text: string = "";
 }
 
 export class MyRoomState extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
+
+  @type("string")
+  currentTurn: string = "";
+
+  @type("boolean")
+  gameStarted: boolean = false;
 }
