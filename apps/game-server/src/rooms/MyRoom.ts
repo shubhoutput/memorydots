@@ -5,6 +5,9 @@ export class MyRoom extends Room {
   declare state: MyRoomState;
 
   onCreate() {
+    this.roomId = "demo-room";
+    this.maxClients = 2;
+
     this.state = new MyRoomState();
   }
 
