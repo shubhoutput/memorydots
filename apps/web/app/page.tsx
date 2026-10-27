@@ -1,149 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Client } from "@colyseus/sdk";
-
-type PlayerData = {
-  sessionId: string;
-  lettersTyped: number;
-  text: string;
-};
+import { useGameRoom } from "@/hooks/useGameRoom";
 
 export default function Home() {
-  const [room, setRoom] = useState<any>(null);
-  const [players, setPlayers] = useState<PlayerData[]>([]);
-  const [currentTurn, setCurrentTurn] = useState("");
-  const [gameStarted, setGameStarted] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const connect = async () => {
-      try {
-        const client = new Client("http://localhost:2567");
-
-        const joinedRoom = await client.joinOrCreate("my_room");
-
-        console.log("Connected!");
-        console.log("Room ID:", joinedRoom.roomId);
-        console.log("Session ID:", joinedRoom.sessionId);
-
-        setRoom(joinedRoom);
-
-        joinedRoom.onStateChange((state: any) => {
-          console.log("Game state:", state);
-
-          const playerList: PlayerData[] = [];
-
-          state.players.forEach((player: any, sessionId: string) => {
-            playerList.push({
-              sessionId,
-              lettersTyped: player.lettersTyped,
-              text: player.text,
-            });
-          });
-
-          setPlayers(playerList);
-          setCurrentTurn(state.currentTurn);
-          setGameStarted(state.gameStarted);
-        });
-      } catch (err) {
-        console.error("Colyseus connection failed:", err);
-        setError("Failed to connect to game server");
-      }
-    };
-
-    connect();
-  }, []);
-
-  const mySessionId = room?.sessionId;
+  const {
+    status,
+    roomId,
+    sessionId,
+    gameState,
+    players,
+  } = useGameRoom();
 
   const myPlayerNumber =
     players.findIndex(
-      (player) => player.sessionId === mySessionId
+      (player) => player.sessionId === sessionId
     ) + 1;
+
+  const currentTurn = gameState?.currentTurn ?? "";
+
+  const gameStarted = gameState?.gameStarted ?? false;
 
   return (
     <main style={{ padding: "40px", fontFamily: "Arial" }}>
       <h1>Colyseus Turn-Based Game</h1>
 
-      {error && <p>{error}</p>}
+      <hr />
 
-      {!room && !error && <p>Connecting...</p>}
+      <h2>Connection</h2>
 
-      {room && (
-        <>
-          <hr />
+      <p>
+        <strong>Status:</strong> {status}
+      </p>
 
-          <h2>Connection</h2>
+      <p>
+        <strong>Room ID:</strong>{" "}
+        {roomId || "Not connected"}
+      </p>
 
-          <p>
-            <strong>Room ID:</strong> {room.roomId}
-          </p>
+      <p>
+        <strong>My Session ID:</strong>{" "}
+        {sessionId || "Not connected"}
+      </p>
 
-          <p>
-            <strong>My Session ID:</strong> {room.sessionId}
-          </p>
+      <p>
+        <strong>I am:</strong>{" "}
+        {myPlayerNumber > 0
+          ? `Player ${myPlayerNumber}`
+          : "Not assigned"}
+      </p>
 
-          <p>
-            <strong>I am:</strong> Player {myPlayerNumber}
-          </p>
+      <hr />
 
-          <hr />
+      <h2>Game</h2>
 
-          <h2>Game</h2>
+      <p>
+        <strong>Game started:</strong>{" "}
+        {gameStarted
+          ? "Yes"
+          : "Waiting for Player 2"}
+      </p>
 
-          <p>
-            <strong>Game started:</strong>{" "}
-            {gameStarted ? "Yes" : "Waiting for Player 2"}
-          </p>
+      <p>
+        <strong>Current turn:</strong>{" "}
+        {currentTurn
+          ? currentTurn === sessionId
+            ? "Me"
+            : "Other Player"
+          : "None"}
+      </p>
 
-          <p>
-            <strong>Current turn:</strong>{" "}
-            {currentTurn
-              ? currentTurn === room.sessionId
-                ? "Me"
-                : "Other Player"
-              : "None"}
-          </p>
+      <hr />
 
-          <hr />
+      <h2>Players</h2>
 
-          <h2>Players</h2>
-
-          {players.map((player, index) => (
-            <div
-              key={player.sessionId}
-              style={{
-                border: "1px solid #ccc",
-                padding: "15px",
-                marginBottom: "10px",
-              }}
-            >
-              <p>
-                <strong>Player {index + 1}</strong>
-              </p>
-
-              <p>
-                Session ID: {player.sessionId}
-              </p>
-
-              <p>
-                Letters typed: {player.lettersTyped}
-              </p>
-
-              <p>
-                Text: {player.text || "(empty)"}
-              </p>
-
-              <p>
-                {player.sessionId === currentTurn
-                  ? "🟢 Their turn"
-                  : "⚪ Waiting"}
-              </p>
-            </div>
-          ))}
-        </>
+      {players.length === 0 && (
+        <p>No players connected.</p>
       )}
+
+      {players.map((player, index) => (
+        <div
+          key={player.sessionId}
+          style={{
+            border: "1px solid #ccc",
+            padding: "15px",
+            marginBottom: "10px",
+          }}
+        >
+          <p>
+            <strong>Player {index + 1}</strong>
+          </p>
+
+          <p>
+            Session ID: {player.sessionId}
+          </p>
+
+          <p>
+            Letters typed: {player.lettersTyped}
+          </p>
+
+          <p>
+            Text: {player.text || "(empty)"}
+          </p>
+
+          <p>
+            {player.sessionId === currentTurn
+              ? "🟢 Their turn"
+              : "⚪ Waiting"}
+          </p>
+        </div>
+      ))}
     </main>
   );
 }

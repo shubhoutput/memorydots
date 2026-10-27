@@ -1,9 +1,7 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { Client, Room, Callbacks } from "@colyseus/sdk";
-
 
 let room: Room | null = null;
 let connecting = false;
@@ -16,14 +14,21 @@ export function useGameRoom() {
     const [players, setPlayers] = useState<any[]>([]);
 
     useEffect(() => {
+        let mounted = true;
+
         async function connect() {
-            // Already connected or currently connecting
-            if (room || connecting) {
-                if (room) {
+            // Already connected
+            if (room) {
+                if (mounted) {
                     setStatus("connected");
                     setRoomId(room.roomId);
                     setSessionId(room.sessionId);
                 }
+                return;
+            }
+
+            // Another connection is already being established
+            if (connecting) {
                 return;
             }
 
@@ -34,7 +39,14 @@ export function useGameRoom() {
                     process.env.NEXT_PUBLIC_COLYSEUS_URL!
                 );
 
-                const joinedRoom = await client.joinOrCreate("my_room");
+                const joinedRoom = await client.joinById("demo-room");
+
+                // Effect was cleaned up while connection was being established
+                if (!mounted) {
+                    await joinedRoom.leave();
+                    connecting = false;
+                    return;
+                }
 
                 room = joinedRoom;
                 connecting = false;
@@ -43,51 +55,77 @@ export function useGameRoom() {
                 setRoomId(joinedRoom.roomId);
                 setSessionId(joinedRoom.sessionId);
 
-                // Listen for complete state changes
+                // Listen for synchronized state changes
                 joinedRoom.onStateChange((state) => {
+                    console.log("Game state:", state);
+
+                    if (!mounted) return;
+
                     setGameState(state);
+
+                    const playerList: any[] = [];
+
+                    state.players.forEach(
+                        (player: any, key: string) => {
+                            playerList.push({
+                                key,
+                                sessionId: key,
+                                lettersTyped: player.lettersTyped,
+                                text: player.text,
+                            });
+                        }
+                    );
+
+                    setPlayers(playerList);
                 });
 
-                // Listen for players being added/removed/changed
+                // Listen for players being removed
                 const callbacks = Callbacks.get(joinedRoom);
 
-               
+                callbacks.onRemove(
+                    "players",
+                    (player, key) => {
+                        console.log("Player removed:", key);
 
-                callbacks.onRemove("players", (player, key) => {
-                    console.log("Player removed:", key);
+                        if (!mounted) return;
 
-                    setPlayers((current) =>
-                        current.filter((p) => p.key !== key)
-                    );
-                });
+                        setPlayers((current) =>
+                            current.filter((p) => p.key !== key)
+                        );
+                    }
+                );
 
-                // Test move
-                joinedRoom.send("move", {
-                    x: 10,
-                    y: 20,
-                });
-
+                // Listen for the room being left
                 joinedRoom.onLeave(() => {
-                    room = null;
+                    if (room === joinedRoom) {
+                        room = null;
+                    }
+
                     connecting = false;
-                    setStatus("disconnected");
+
+                    if (mounted) {
+                        setStatus("disconnected");
+                    }
                 });
+
             } catch (error) {
                 connecting = false;
-                console.error("Colyseus connection failed:", error);
-                setStatus("error");
+
+                console.error(
+                    "Colyseus connection failed:",
+                    error
+                );
+
+                if (mounted) {
+                    setStatus("error");
+                }
             }
         }
 
         connect();
 
         return () => {
-            if (room) {
-                room.leave();
-                room = null;
-            }
-
-            connecting = false;
+            mounted = false;
         };
     }, []);
 
